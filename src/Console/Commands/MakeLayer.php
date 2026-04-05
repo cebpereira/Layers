@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace WilliamJSS\Layers\Console\Commands;
 
 use Illuminate\Console\Command;
@@ -33,7 +35,7 @@ class MakeLayer extends Command
      *
      * @return int
      */
-    public function handle()
+    public function handle(): int
     {
         $name = $this->argument('name');
         $options = $this->options();
@@ -54,11 +56,11 @@ class MakeLayer extends Command
         }
 
         if ($options['interface']) {
-            $this->call('layers:repository', ['name' => $name, '--eloquent' => true]);
+            $this->call('layers:repository', ['name' => $name, '--interface' => true]);
         }
 
         if ($options['eloquent']) {
-            $this->call('layers:repository', ['name' => $name, '--interface' => true]);
+            $this->call('layers:repository', ['name' => $name, '--eloquent' => true]);
         }
 
         if ($options['service']) {
@@ -67,6 +69,4 @@ class MakeLayer extends Command
 
         return Command::SUCCESS;
     }
-
 }
-

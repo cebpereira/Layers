@@ -1,8 +1,9 @@
 <?php
 
+declare(strict_types=1);
+
 namespace WilliamJSS\Layers\Console\Commands;
 
-use Illuminate\Console\Command;
 use Illuminate\Console\GeneratorCommand;
 use Illuminate\Support\Str;
 use InvalidArgumentException;
@@ -29,7 +30,7 @@ class MakeRepository extends GeneratorCommand
 
     protected $type = 'Repository file';
 
-    protected function getNameInput()
+    protected function getNameInput(): string
     {
         return str_replace('.', '/', trim($this->argument('name')));
     }
@@ -39,7 +40,7 @@ class MakeRepository extends GeneratorCommand
      *
      * @return string
      */
-    protected function getStub()
+    protected function getStub(): string
     {
         $stubs_path = base_path('vendor/williamjss/layers') . '/src/Console/Commands/Stubs/';
         return $stubs_path . 'Repository' . $this->getType() . '.stub';
@@ -51,7 +52,7 @@ class MakeRepository extends GeneratorCommand
      * @param  string  $rootNamespace
      * @return string
      */
-    protected function getDefaultNamespace($rootNamespace)
+    protected function getDefaultNamespace($rootNamespace): string
     {
         return $rootNamespace . '\\' . config('layers.namespace.repositories');
     }
@@ -62,7 +63,7 @@ class MakeRepository extends GeneratorCommand
      * @param  string  $name
      * @return string
      */
-    protected function getPath($name)
+    protected function getPath($name): string
     {
         $name = Str::replaceFirst($this->rootNamespace(), '', $name);
 
@@ -75,13 +76,11 @@ class MakeRepository extends GeneratorCommand
      * @param  string  $name
      * @return string
      */
-    protected function buildClass($name)
+    protected function buildClass($name): string
     {
         $stub = parent::buildClass($name);
 
-        $model = $name;
-
-        return $model ? $this->replaceModel($stub, $model) : $stub;
+        return $this->replaceModel($stub, $name);
     }
 
     /**
@@ -91,7 +90,7 @@ class MakeRepository extends GeneratorCommand
      * @param  string  $model
      * @return string
      */
-    protected function replaceModel($stub, $model)
+    protected function replaceModel($stub, $model): string
     {
         $modelClass = $this->parseModel($model);
 
@@ -114,7 +113,7 @@ class MakeRepository extends GeneratorCommand
      *
      * @throws \InvalidArgumentException
      */
-    protected function parseModel($model)
+    protected function parseModel(string $model): string
     {
         if (preg_match('([^A-Za-z0-9_/\\\\])', $model)) {
             throw new InvalidArgumentException('Model name contains invalid characters.');
@@ -124,29 +123,24 @@ class MakeRepository extends GeneratorCommand
     }
 
     /**
-     * Get the repository type
+     * Get the repository type.
      *
      * @return string
+     *
+     * @throws \InvalidArgumentException
      */
-    protected function getType()
+    protected function getType(): string
     {
         $options = $this->options();
+
         if ($options['eloquent'] && $options['interface']) {
             throw new InvalidArgumentException('More than one option provided: expected \'eloquent\' or \'interface\', not both.');
+        } elseif ($options['eloquent']) {
+            return 'Eloquent';
+        } elseif ($options['interface']) {
+            return 'Interface';
         }
 
-        else if ($options['eloquent']) {
-            $type = 'Eloquent';
-        }
-
-        else if ($options['interface']) {
-            $type = 'Interface';
-        }
-
-        else {
-            throw new InvalidArgumentException('Invalid option: expected \'eloquent\' or \'interface\'.');
-        }
-
-        return $type;
+        throw new InvalidArgumentException('Invalid option: expected \'eloquent\' or \'interface\'.');
     }
 }

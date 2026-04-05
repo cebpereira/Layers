@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace WilliamJSS\Layers\Providers;
 
 use Illuminate\Support\Facades\File;

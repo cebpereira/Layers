@@ -1,8 +1,9 @@
 <?php
 
+declare(strict_types=1);
+
 namespace WilliamJSS\Layers\Console\Commands;
 
-use Illuminate\Console\Command;
 use Illuminate\Console\GeneratorCommand;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Str;
@@ -30,7 +31,7 @@ class MakeService extends GeneratorCommand
 
     protected $type = 'Service file';
 
-    protected function getNameInput()
+    protected function getNameInput(): string
     {
         return str_replace('.', '/', trim($this->argument('name')));
     }
@@ -40,15 +41,15 @@ class MakeService extends GeneratorCommand
      *
      * @return string
      */
-    protected function getStub()
+    protected function getStub(): string
     {
         $stubs_path = base_path('vendor/williamjss/layers') . '/src/Console/Commands/Stubs/';
-        
+
         if ($this->withRepositories()) {
             return $stubs_path . 'ServiceMultiRepositories.stub';
-        } else {
-            return $stubs_path . 'Service.stub';
         }
+
+        return $stubs_path . 'Service.stub';
     }
 
     /**
@@ -57,7 +58,7 @@ class MakeService extends GeneratorCommand
      * @param  string  $rootNamespace
      * @return string
      */
-    protected function getDefaultNamespace($rootNamespace)
+    protected function getDefaultNamespace($rootNamespace): string
     {
         return $rootNamespace . '\\' . config('layers.namespace.services');
     }
@@ -68,7 +69,7 @@ class MakeService extends GeneratorCommand
      * @param  string  $name
      * @return string
      */
-    protected function getPath($name)
+    protected function getPath($name): string
     {
         $name = Str::replaceFirst($this->rootNamespace(), '', $name);
 
@@ -81,13 +82,11 @@ class MakeService extends GeneratorCommand
      * @param  string  $name
      * @return string
      */
-    protected function buildClass($name)
+    protected function buildClass($name): string
     {
         $stub = parent::buildClass($name);
 
-        $model = $name;
-
-        return $model ? $this->replaceModel($stub, $model) : $stub;
+        return $this->replaceModel($stub, $name);
     }
 
     /**
@@ -97,9 +96,9 @@ class MakeService extends GeneratorCommand
      * @param  string  $model
      * @return string
      */
-    protected function replaceModel($stub, $model)
+    protected function replaceModel($stub, $model): string
     {
-        if ($this->options()['wr']){
+        if ($this->options()['wr']) {
             $repositories = '';
             $variables = '';
             $construct = '';
@@ -117,9 +116,8 @@ class MakeService extends GeneratorCommand
                 '{{ thisConstruct }}' => $thisConstruct,
             ];
         } else {
-            $namespaceRepo = $this->parseModel($model);
             $replace = [
-                '{{ namespaceRepository }}' => $namespaceRepo,
+                '{{ namespaceRepository }}' => $this->parseModel($model),
             ];
         }
 
@@ -138,7 +136,7 @@ class MakeService extends GeneratorCommand
      *
      * @throws \InvalidArgumentException
      */
-    protected function parseModel($model)
+    protected function parseModel(string $model): string
     {
         if (preg_match('([^A-Za-z0-9_/\\\\])', $model)) {
             throw new InvalidArgumentException('Model name contains invalid characters.');
@@ -152,8 +150,10 @@ class MakeService extends GeneratorCommand
      *
      * @param  string  $model
      * @return string
+     *
+     * @throws \InvalidArgumentException
      */
-    protected function qualifyModel(string $model)
+    protected function qualifyModel(string $model): string
     {
         $model = class_basename($model) . 'RepositoryInterface';
 
@@ -170,15 +170,16 @@ class MakeService extends GeneratorCommand
     }
 
     /**
-     * Get a possibles repositories namespace
+     * Get possible repositories namespaces.
      *
      * @return array<int, string>
+     * @throws \InvalidArgumentException
      */
-    protected function possiblesRepositories()
+    protected function possiblesRepositories(): array
     {
         $repoPath = config('layers.path.repositories');
 
-        if(!File::exists($repoPath)){
+        if (!File::exists($repoPath)) {
             throw new InvalidArgumentException('Invalid repository path: ' . $repoPath);
         }
 
@@ -206,15 +207,12 @@ class MakeService extends GeneratorCommand
     }
 
     /**
-     * Verify 'with-repositories' option
+     * Verify 'with-repositories' option.
      *
      * @return bool
      */
-    protected function withRepositories(){
-        if($this->options()['wr']){
-            return TRUE;
-        } else {
-            return FALSE;
-        }
+    protected function withRepositories(): bool
+    {
+        return (bool) $this->options()['wr'];
     }
 }

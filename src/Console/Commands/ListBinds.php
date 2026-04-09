@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace WilliamJSS\Layers\Console\Commands;
 
 use Illuminate\Console\Command;
@@ -28,7 +30,7 @@ class ListBinds extends Command
      *
      * @return int
      */
-    public function handle()
+    public function handle(): int
     {
         $path = config('layers.path.repositories');
 
@@ -38,10 +40,10 @@ class ListBinds extends Command
             $merge = collect();
             for ($i = 0; $i <= 2; $i++) {
                 $folders = collect((new Finder)->files()->depth($i)->in($path))
-                ->map(fn($file) => $file->getBasename('.php'))
-                ->collect()
-                ->all();
-                
+                    ->map(fn($file) => $file->getBasename('.php'))
+                    ->collect()
+                    ->all();
+
                 $merge = $merge->merge($folders);
             }
 
@@ -53,15 +55,17 @@ class ListBinds extends Command
                     return str_replace('Interface', '', $model);
                 }
             })->values()->all();
-            
-            # Bind repositories interfaces/eloquents
+
+            # List repositories interfaces/eloquents
             foreach ($models as $model) {
                 if ($model != null) {
-                    echo(str_replace('/', '\\', Str::ucfirst($model)) . 'Interface' . "\n");
-                    echo(str_replace('/', '\\', Str::ucfirst($model)) . 'Eloquent' . "\n\n");
+                    $this->line(str_replace('/', '\\', Str::ucfirst($model)) . 'Interface');
+                    $this->line(str_replace('/', '\\', Str::ucfirst($model)) . 'Eloquent');
+                    $this->newLine();
                 }
             }
         }
-    }
 
+        return Command::SUCCESS;
+    }
 }

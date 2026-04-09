@@ -1,24 +1,25 @@
 <?php
 
+declare(strict_types=1);
+
 namespace {{ namespace }};
 
 use App\Models\{{ class }};
+use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Collection as SupportCollection;
 
 class {{ class }}RepositoryEloquent implements {{ class }}RepositoryInterface
 {
-    protected ${{ modelVariable }};
-
-    public function __construct({{ class }} ${{ modelVariable }})
-    {
-        $this->{{ modelVariable }} = ${{ modelVariable }};
-    }
+    public function __construct(
+        protected {{ class }} ${{ modelVariable }},
+    ) {}
 
     /**
      * Stores a new instance of {{ class }} in the database
-     * @param \Illuminate\Support\Collection|array|int|string $data
+     * @param SupportCollection|array|int|string $data
      * @return {{ class }}
      */
-    public function store($data)
+    public function store(SupportCollection|array|int|string $data): {{ class }}
     {
         return $this->{{ modelVariable }}->create($data);
     }
@@ -26,44 +27,51 @@ class {{ class }}RepositoryEloquent implements {{ class }}RepositoryInterface
     /**
      * Returns all instances of {{ class }} from the database
      * @param array|string $columns
-     * @param array<array> $filters
-     * @return \Illuminate\Database\Eloquent\Collection<int, {{ class }}>
+     * @param array<array>|null $filters
+     * @return Collection<int, {{ class }}>
      */
-    public function getList($columns=['*'], $filters=null)
+    public function getList(array|string $columns = ['*'], ?array $filters = null): Collection
     {
-        return $this->{{ modelVariable }}->where($filters)->get($columns);
+        $query = $this->{{ modelVariable }}->newQuery();
+
+        if ($filters) {
+            $query->where($filters);
+        }
+
+        return $query->get($columns);
     }
 
     /**
      * Returns an instance of {{ class }} from the given id
      * @param int|string $id
-     * @return {{ class }}
+     * @return {{ class }}|null
      */
-    public function get($id)
+    public function get(int|string $id): ?{{ class }}
     {
         return $this->{{ modelVariable }}->find($id);
     }
 
     /**
      * Updates the data of an instance of {{ class }}
-     * @param \Illuminate\Support\Collection|array|int|string $data
+     * @param SupportCollection|array|int|string $data
      * @param int|string $id
      * @return {{ class }}
      */
-    public function update($data, $id)
+    public function update(SupportCollection|array|int|string $data, int|string $id): {{ class }}
     {
-        ${{ modelVariable }} = $this->{{ modelVariable }}->find($id);
+        ${{ modelVariable }} = $this->{{ modelVariable }}->findOrFail($id);
         ${{ modelVariable }}->update($data);
+
         return ${{ modelVariable }};
     }
 
     /**
      * Removes an instance of {{ class }} from the database
      * @param int|string $id
-     * @return int
+     * @return bool
      */
-    public function destroy($id)
+    public function destroy(int|string $id): bool
     {
-        return $this->{{ modelVariable }}->find($id)->delete();
+        return (bool) $this->{{ modelVariable }}->findOrFail($id)->delete();
     }
 }

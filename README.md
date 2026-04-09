@@ -2,9 +2,9 @@
 
 A laravel package to generate files for layered architecture and automate interface bindings.
 
-**Recommended Laravel version:** `^9.0`
+**Recommended Laravel version:** `^12.0`
 
-Go to [Laravel Docs](https://laravel.com/docs/9.x/releases#support-policy) to see support policy.
+Go to [Laravel Docs](https://laravel.com/docs/releases#support-policy) to see support policy.
 
 ## Summary
 - <a href="#requirements">Requirements</a>
@@ -14,14 +14,15 @@ Go to [Laravel Docs](https://laravel.com/docs/9.x/releases#support-policy) to se
   - <a href="#generate-layers">Generate Layers</a>
   - <a href="#generate-layers-with-subfolders">Generate Layers with Subfolders</a>
   - <a href="#generate-services-with-more-than-one-repository">Generate Services with more than one repository</a>
+  - <a href="#scaffold-layers-from-models">Scaffold Layers from Models</a>
 
 ## Requirements
 
 ```json
-"php": "^8.0.2"
-"symfony/finder": "^6.3"
-"illuminate/support": "^9.0 || ^10.20"
-"illuminate/console": "^9.0 || ^10.20"
+"php": "^8.2"
+"symfony/finder": "^6.3 || ^7.0"
+"illuminate/support": "^9.0 || ^10.20 || ^11.0 || ^12.0"
+"illuminate/console": "^9.0 || ^10.20 || ^11.0 || ^12.0"
 ```
 
 ## Installation
@@ -78,7 +79,8 @@ Available options:
 - `php artisan layers:repository --eloquent` : the same as ***php artisan layers --eloquent***
 - `php artisan layers:repository --interface` : the same as ***php artisan layers --interface***
 - `php artisan layers:service` : the same as ***php artisan layers --service***
-- `php artisan layers:binds` : List all binds from application 
+- `php artisan layers:binds` : List all binds from application
+- `php artisan layers:scaffold` : Scaffold repositories and services for all models
 
 ### Generate Layers
 ```bash
@@ -96,9 +98,13 @@ php artisan layers --all User
 ```php
 <?php
 
-namespace App\Repositories\User;
+declare(strict_types=1);
+
+namespace App\Repositories;
 
 use App\Models\User;
+use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Collection as SupportCollection;
 
 interface UserRepositoryInterface
 {
@@ -106,40 +112,40 @@ interface UserRepositoryInterface
 
     /**
      * Stores a new instance of User in the database
-     * @param \Illuminate\Support\Collection|array|int|string $data
+     * @param SupportCollection|array|int|string $data
      * @return User
      */
-    public function store($data);
+    public function store(SupportCollection|array|int|string $data): User;
 
     /**
      * Returns all instances of User from the database
      * @param array|string $columns
-     * @param array<array> $filters
-     * @return \Illuminate\Database\Eloquent\Collection<int, static>
+     * @param array<array>|null $filters
+     * @return Collection<int, User>
      */
-    public function getList($columns=['*'], $filters=null);
+    public function getList(array|string $columns = ['*'], ?array $filters = null): Collection;
 
     /**
      * Returns an instance of User from the given id
      * @param int|string $id
-     * @return User
+     * @return User|null
      */
-    public function get($id);
+    public function get(int|string $id): ?User;
 
     /**
      * Updates the data of an instance of User
-     * @param \Illuminate\Support\Collection|array|int|string $data
+     * @param SupportCollection|array|int|string $data
      * @param int|string $id
      * @return User
      */
-    public function update($data, $id);
+    public function update(SupportCollection|array|int|string $data, int|string $id): User;
 
     /**
      * Removes an instance of User from the database
      * @param int|string $id
-     * @return int
+     * @return bool
      */
-    public function destroy($id);
+    public function destroy(int|string $id): bool;
 }
 ```
 
@@ -147,25 +153,26 @@ interface UserRepositoryInterface
 ```php
 <?php
 
+declare(strict_types=1);
+
 namespace App\Repositories;
 
 use App\Models\User;
+use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Collection as SupportCollection;
 
 class UserRepositoryEloquent implements UserRepositoryInterface
 {
-    protected $user;
-
-    public function __construct(User $user)
-    {
-        $this->user = $user;
-    }
+    public function __construct(
+        protected User $user,
+    ) {}
 
     /**
      * Stores a new instance of User in the database
-     * @param \Illuminate\Support\Collection|array|int|string $data
+     * @param SupportCollection|array|int|string $data
      * @return User
      */
-    public function store($data)
+    public function store(SupportCollection|array|int|string $data): User
     {
         return $this->user->create($data);
     }
@@ -173,53 +180,61 @@ class UserRepositoryEloquent implements UserRepositoryInterface
     /**
      * Returns all instances of User from the database
      * @param array|string $columns
-     * @param array<array> $filters
-     * @return \Illuminate\Database\Eloquent\Collection<int, static>
+     * @param array<array>|null $filters
+     * @return Collection<int, User>
      */
-    public function getList($columns=['*'], $filters=null)
+    public function getList(array|string $columns = ['*'], ?array $filters = null): Collection
     {
-        return $this->user->where($filters)->get($columns);
+        $query = $this->user->newQuery();
+
+        if ($filters) {
+            $query->where($filters);
+        }
+
+        return $query->get($columns);
     }
 
     /**
      * Returns an instance of User from the given id
      * @param int|string $id
-     * @return User
+     * @return User|null
      */
-    public function get($id)
+    public function get(int|string $id): ?User
     {
         return $this->user->find($id);
     }
 
     /**
      * Updates the data of an instance of User
-     * @param \Illuminate\Support\Collection|array|int|string $data
+     * @param SupportCollection|array|int|string $data
      * @param int|string $id
      * @return User
      */
-    public function update($data, $id)
+    public function update(SupportCollection|array|int|string $data, int|string $id): User
     {
-        $user = $this->user->find($id);
+        $user = $this->user->findOrFail($id);
         $user->update($data);
+
         return $user;
     }
 
     /**
      * Removes an instance of User from the database
      * @param int|string $id
-     * @return int
+     * @return bool
      */
-    public function destroy($id)
+    public function destroy(int|string $id): bool
     {
-        return $this->user->find($id)->delete();
+        return (bool) $this->user->findOrFail($id)->delete();
     }
 }
-
 ```
 
 #### UserService.php
 ```php
 <?php
+
+declare(strict_types=1);
 
 namespace App\Services;
 
@@ -227,18 +242,12 @@ use App\Repositories\UserRepositoryInterface;
 
 class UserService
 {
-    private $repoUser;
-
     public function __construct(
-        UserRepositoryInterface $repoUser,
-    )
-    {
-        $this->repoUser = $repoUser;
-    }
+        protected UserRepositoryInterface $repoUser,
+    ) {}
 
     // Add your functions here...
 }
-
 ```
 
 ### Generate Layers with Subfolders
@@ -262,6 +271,8 @@ php artisan layers --service --wr=Address --wr=User Person
 ```php
 <?php
 
+declare(strict_types=1);
+
 namespace App\Services;
 
 use App\Repositories\UserRepositoryInterface;
@@ -275,13 +286,52 @@ class PersonService
     public function __construct(
         AddressRepositoryInterface $repoAddress,
         UserRepositoryInterface $repoUser,
-    )
-    {
+    ) {
         $this->repoAddress = $repoAddress;
         $this->repoUser = $repoUser;
     }
 
     // Add your functions here...
 }
+```
+
+### Scaffold Layers from Models
+
+Instead of generating files one by one, you can scaffold repositories for all models at once:
+
+```bash
+php artisan layers:scaffold
+```
+
+This command scans the models directory (configured in `layers.path.models`) and generates an Interface and Eloquent pair for every model found.
+
+**Example** — given the following models:
 
 ```
+app/Models/
+├── User.php
+├── Company.php
+└── Auth/
+    └── Token.php
+```
+
+Running `layers:scaffold` generates:
+
+```
+app/Repositories/
+├── UserRepositoryInterface.php
+├── UserRepositoryEloquent.php
+├── CompanyRepositoryInterface.php
+├── CompanyRepositoryEloquent.php
+└── Auth/
+    ├── TokenRepositoryInterface.php
+    └── TokenRepositoryEloquent.php
+```
+
+To also generate a service for each model, use the `--with-service` flag:
+
+```bash
+php artisan layers:scaffold --with-service
+```
+
+If a file already exists, it will be skipped automatically — no files are overwritten.

@@ -1,8 +1,12 @@
 <?php
 
+declare(strict_types=1);
+
 namespace {{ namespace }};
 
 use App\Models\{{ class }};
+use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Collection as SupportCollection;
 
 interface {{ class }}RepositoryInterface
 {
@@ -10,38 +14,38 @@ interface {{ class }}RepositoryInterface
 
     /**
      * Stores a new instance of {{ class }} in the database
-     * @param \Illuminate\Support\Collection|array|int|string $data
+     * @param SupportCollection|array|int|string $data
      * @return {{ class }}
      */
-    public function store($data);
+    public function store(SupportCollection|array|int|string $data): {{ class }};
 
     /**
      * Returns all instances of {{ class }} from the database
      * @param array|string $columns
-     * @param array<array> $filters
-     * @return \Illuminate\Database\Eloquent\Collection<int, {{ class }}>
+     * @param array<array>|null $filters
+     * @return Collection<int, {{ class }}>
      */
-    public function getList($columns=['*'], $filters=null);
+    public function getList(array|string $columns = ['*'], ?array $filters = null): Collection;
 
     /**
      * Returns an instance of {{ class }} from the given id
      * @param int|string $id
-     * @return {{ class }}
+     * @return {{ class }}|null
      */
-    public function get($id);
+    public function get(int|string $id): ?{{ class }};
 
     /**
      * Updates the data of an instance of {{ class }}
-     * @param \Illuminate\Support\Collection|array|int|string $data
+     * @param SupportCollection|array|int|string $data
      * @param int|string $id
      * @return {{ class }}
      */
-    public function update($data, $id);
+    public function update(SupportCollection|array|int|string $data, int|string $id): {{ class }};
 
     /**
      * Removes an instance of {{ class }} from the database
      * @param int|string $id
-     * @return int
+     * @return bool
      */
-    public function destroy($id);
+    public function destroy(int|string $id): bool;
 }

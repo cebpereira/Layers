@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace WilliamJSS\Layers\Providers;
+namespace CebPereira\Layers\Providers;
 
 use Illuminate\Support\ServiceProvider;
-use WilliamJSS\Layers\Console\Commands\MakeLayer;
-use WilliamJSS\Layers\Console\Commands\MakeRepository;
-use WilliamJSS\Layers\Console\Commands\MakeService;
-use WilliamJSS\Layers\Console\Commands\ListBinds;
-use WilliamJSS\Layers\Console\Commands\ScaffoldLayers;
+use CebPereira\Layers\Console\Commands\MakeLayer;
+use CebPereira\Layers\Console\Commands\MakeRepository;
+use CebPereira\Layers\Console\Commands\MakeService;
+use CebPereira\Layers\Console\Commands\ListBinds;
+use CebPereira\Layers\Console\Commands\ScaffoldLayers;
 
 class LayersServiceProvider extends ServiceProvider
 {

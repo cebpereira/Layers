@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace WilliamJSS\Layers\Providers;
+namespace CebPereira\Layers\Providers;
 
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\ServiceProvider;

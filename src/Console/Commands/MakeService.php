@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace WilliamJSS\Layers\Console\Commands;
+namespace CebPereira\Layers\Console\Commands;
 
 use Illuminate\Console\GeneratorCommand;
 use Illuminate\Support\Facades\File;
@@ -43,7 +43,7 @@ class MakeService extends GeneratorCommand
      */
     protected function getStub(): string
     {
-        $stubs_path = base_path('vendor/williamjss/layers') . '/src/Console/Commands/Stubs/';
+        $stubs_path = base_path('vendor/cebpereira/layers') . '/src/Console/Commands/Stubs/';
 
         if ($this->withRepositories()) {
             return $stubs_path . 'ServiceMultiRepositories.stub';

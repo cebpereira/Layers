@@ -1,17 +1,21 @@
 {
-    "name": "williamjss/layers",
+    "name": "cebpereira/layers",
     "description": "A laravel package to generate files for layered architecture",
     "type": "library",
     "license": "MIT",
     "autoload": {
         "psr-4": {
-            "WilliamJSS\\Layers\\": "src/"
+            "CebPereira\\Layers\\": "src/"
         }
     },
     "authors": [
         {
             "name": "William Sena",
             "email": "williamsena088@gmail.com"
+        },
+        {
+            "name": "Carlos Pereira",
+            "email": "c.elandro.bp@gmail.com"
         }
     ],
     "require": {
@@ -23,7 +27,7 @@
     "extra": {
         "laravel": {
             "providers": [
-                "WilliamJSS\\Layers\\Providers\\LayersServiceProvider"
+                "CebPereira\\Layers\\Providers\\LayersServiceProvider"
             ]
         }
     }

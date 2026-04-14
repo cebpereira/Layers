@@ -28,7 +28,7 @@ Go to [Laravel Docs](https://laravel.com/docs/releases#support-policy) to see su
 ## Installation
 
 ```bash
-composer require williamjss/layers --dev
+composer require cebpereira/layers --dev
 ```
 
 ## Configuration

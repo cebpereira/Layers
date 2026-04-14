@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace WilliamJSS\Layers\Console\Commands;
+namespace CebPereira\Layers\Console\Commands;
 
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\File;

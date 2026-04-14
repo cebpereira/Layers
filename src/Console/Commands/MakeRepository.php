@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace WilliamJSS\Layers\Console\Commands;
+namespace CebPereira\Layers\Console\Commands;
 
 use Illuminate\Console\GeneratorCommand;
 use Illuminate\Support\Str;
@@ -42,7 +42,7 @@ class MakeRepository extends GeneratorCommand
      */
     protected function getStub(): string
     {
-        $stubs_path = base_path('vendor/williamjss/layers') . '/src/Console/Commands/Stubs/';
+        $stubs_path = base_path('vendor/cebpereira/layers') . '/src/Console/Commands/Stubs/';
         return $stubs_path . 'Repository' . $this->getType() . '.stub';
     }
 

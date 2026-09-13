@@ -4,14 +4,18 @@ declare(strict_types=1);
 
 namespace CebPereira\Layers\Console\Commands;
 
-use Illuminate\Console\GeneratorCommand;
+use CebPereira\Layers\Console\Concerns\GeneratesLayers;
+use CebPereira\Layers\Support\BindingScanner;
+use CebPereira\Layers\Support\LayerTarget;
+use CebPereira\Layers\Support\ModelLocator;
+use Illuminate\Console\Command;
 use Illuminate\Support\Facades\File;
-use Illuminate\Support\Str;
 use InvalidArgumentException;
-use Symfony\Component\Finder\Finder;
 
-class MakeService extends GeneratorCommand
+class MakeService extends Command
 {
+    use GeneratesLayers;
+
     /**
      * The name and signature of the console command.
      *
@@ -19,7 +23,7 @@ class MakeService extends GeneratorCommand
      */
     protected $signature = '
         layers:service {name}
-        {--wr=*}
+        {--wr=* : Repositories injected into the service (defaults to the service model)}
     ';
 
     /**
@@ -29,190 +33,76 @@ class MakeService extends GeneratorCommand
      */
     protected $description = 'Create a service file';
 
-    protected $type = 'Service file';
-
-    protected function getNameInput(): string
-    {
-        return str_replace('.', '/', trim($this->argument('name')));
-    }
-
     /**
-     * Get the stub file for the generator.
+     * Execute the console command.
      *
-     * @return string
+     * @return int
      */
-    protected function getStub(): string
+    public function handle(ModelLocator $locator, BindingScanner $scanner): int
     {
-        $stubs_path = base_path('vendor/cebpereira/layers') . '/src/Console/Commands/Stubs/';
+        $name = (string) $this->argument('name');
 
-        if ($this->withRepositories()) {
-            return $stubs_path . 'ServiceMultiRepositories.stub';
+        try {
+            $target = LayerTarget::for('service', $locator->resolve($name));
+
+            $repositories = collect($this->option('wr') ?: [$name])
+                ->map(fn (string $repository): array => $this->repository($repository, $locator, $scanner));
+        } catch (InvalidArgumentException $e) {
+            $this->components->error($e->getMessage());
+
+            return Command::FAILURE;
         }
 
-        return $stubs_path . 'Service.stub';
+        $created = $this->writeLayer('Service file', $target, 'Service', [
+            'imports' => $this->imports(
+                $target->namespace,
+                $repositories->map(fn (array $repository): string => $repository['interface']->fqcn())->all()
+            ),
+            'parameters' => $repositories
+                ->map(fn (array $repository): string => sprintf(
+                    '        protected %s $repo%s,',
+                    $repository['interface']->class,
+                    $repository['model']
+                ))
+                ->implode("\n"),
+        ]);
+
+        return $created ? Command::SUCCESS : Command::FAILURE;
     }
 
     /**
-     * Get the default namespace for the class.
+     * Find the repository interface of a model.
      *
-     * @param  string  $rootNamespace
-     * @return string
-     */
-    protected function getDefaultNamespace($rootNamespace): string
-    {
-        return $rootNamespace . '\\' . config('layers.namespace.services');
-    }
-
-    /**
-     * Get the destination class path.
-     *
-     * @param  string  $name
-     * @return string
-     */
-    protected function getPath($name): string
-    {
-        $name = Str::replaceFirst($this->rootNamespace(), '', $name);
-
-        return $this->laravel['path'] . '/' . str_replace('\\', '/', $name) . 'Service.php';
-    }
-
-    /**
-     * Build the class with the given name.
-     *
-     * @param  string  $name
-     * @return string
-     */
-    protected function buildClass($name): string
-    {
-        $stub = parent::buildClass($name);
-
-        return $this->replaceModel($stub, $name);
-    }
-
-    /**
-     * Replace the model for the given stub.
-     *
-     * @param  string  $stub
-     * @param  string  $model
-     * @return string
-     */
-    protected function replaceModel($stub, $model): string
-    {
-        if ($this->options()['wr']) {
-            $repositories = '';
-            $variables = '';
-            $construct = '';
-            $thisConstruct = '';
-            foreach ($this->options()['wr'] as $key => $value) {
-                $repositories = Str::of($repositories)->newLine()->append('use ' . $this->qualifyModel($value) . ';');
-                $variables = Str::of($variables)->newLine()->append('    private $repo' . $value . ';');
-                $construct = Str::of($construct)->newLine()->append('        ' . $value . 'RepositoryInterface $repo' . $value . ',');
-                $thisConstruct = Str::of($thisConstruct)->newLine()->append('        $this->repo' . $value . ' = $repo' . $value . ';');
-            }
-            $replace = [
-                '{{ repositories }}' => $repositories,
-                '{{ variables }}' => $variables,
-                '{{ construct }}' => $construct,
-                '{{ thisConstruct }}' => $thisConstruct,
-            ];
-        } else {
-            $replace = [
-                '{{ namespaceRepository }}' => $this->parseModel($model),
-            ];
-        }
-
-        return str_replace(
-            array_keys($replace),
-            array_values($replace),
-            $stub
-        );
-    }
-
-    /**
-     * Get the fully-qualified model class name.
-     *
-     * @param  string  $model
-     * @return string
+     * @return array{model: string, interface: LayerTarget}
      *
      * @throws \InvalidArgumentException
      */
-    protected function parseModel(string $model): string
+    protected function repository(string $name, ModelLocator $locator, BindingScanner $scanner): array
     {
-        if (preg_match('([^A-Za-z0-9_/\\\\])', $model)) {
-            throw new InvalidArgumentException('Model name contains invalid characters.');
+        $model = $locator->resolve($name);
+        $interface = LayerTarget::for('interface', $model);
+
+        if (File::exists($interface->path)) {
+            return ['model' => $model->name, 'interface' => $interface];
         }
 
-        return $this->qualifyModel($model);
-    }
+        # Repositories generated without a matching model file
+        $candidates = collect($scanner->interfaces())
+            ->filter(fn (array $candidate): bool => $candidate['target']->class === $interface->class)
+            ->values();
 
-    /**
-     * Qualify the given model class base name.
-     *
-     * @param  string  $model
-     * @return string
-     *
-     * @throws \InvalidArgumentException
-     */
-    protected function qualifyModel(string $model): string
-    {
-        $model = class_basename($model) . 'RepositoryInterface';
-
-        $repo_path = config('layers.path.repositories');
-        $repo_namespace = config('layers.namespace.repositories');
-
-        foreach ($this->possiblesRepositories() as $key => $value) {
-            if (Str::contains($value, $model)) {
-                return $this->rootNamespace() . str_replace('/', '\\', Str::replaceFirst($repo_path, $repo_namespace, $value));
-            }
+        if ($candidates->count() > 1) {
+            throw new InvalidArgumentException(sprintf(
+                'Repository [%s] is ambiguous. Use one of: %s.',
+                $interface->class,
+                $candidates->map(fn (array $candidate): string => $candidate['target']->fqcn())->implode(', ')
+            ));
         }
 
-        throw new InvalidArgumentException('Repository not found: ' . $model);
-    }
-
-    /**
-     * Get possible repositories namespaces.
-     *
-     * @return array<int, string>
-     * @throws \InvalidArgumentException
-     */
-    protected function possiblesRepositories(): array
-    {
-        $repoPath = config('layers.path.repositories');
-
-        if (!File::exists($repoPath)) {
-            throw new InvalidArgumentException('Invalid repository path: ' . $repoPath);
+        if ($candidates->isEmpty()) {
+            throw new InvalidArgumentException('Repository not found: ' . $interface->fqcn());
         }
 
-        $merge = collect();
-        $depth = 2;
-
-        for ($i = 0; $i <= $depth; $i++) {
-            $folders = collect((new Finder)->files()->depth($i)->in($repoPath))
-                ->map(fn($file) => $file->getBasename('.php'))
-                ->collect();
-
-            $merge = $merge->merge($folders);
-        }
-
-        return $merge
-            ->keys()
-            ->collect()
-            ->map(function ($file, $repoPath) {
-                $model = str_replace($repoPath . '/', '', $file);
-                $model = str_replace('.php', '', $model);
-                return $model;
-            })
-            ->collect()
-            ->all();
-    }
-
-    /**
-     * Verify 'with-repositories' option.
-     *
-     * @return bool
-     */
-    protected function withRepositories(): bool
-    {
-        return (bool) $this->options()['wr'];
+        return ['model' => $model->name, 'interface' => $candidates->first()['target']];
     }
 }

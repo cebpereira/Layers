@@ -4,10 +4,8 @@ declare(strict_types=1);
 
 namespace CebPereira\Layers\Console\Commands;
 
+use CebPereira\Layers\Support\BindingScanner;
 use Illuminate\Console\Command;
-use Illuminate\Support\Facades\File;
-use Illuminate\Support\Str;
-use Symfony\Component\Finder\Finder;
 
 class ListBinds extends Command
 {
@@ -30,41 +28,29 @@ class ListBinds extends Command
      *
      * @return int
      */
-    public function handle(): int
+    public function handle(BindingScanner $scanner): int
     {
-        $path = config('layers.path.repositories');
+        $bindings = $scanner->bindings();
 
-        if (File::exists($path)) {
+        if ($bindings === []) {
+            $this->components->info('No repository bindings found.');
 
-            # Search files in repository folder
-            $merge = collect();
-            for ($i = 0; $i <= 2; $i++) {
-                $folders = collect((new Finder)->files()->depth($i)->in($path))
-                    ->map(fn($file) => $file->getBasename('.php'))
-                    ->collect()
-                    ->all();
-
-                $merge = $merge->merge($folders);
-            }
-
-            # Save only repository subfolder and model into array
-            $models = $merge->keys()->collect()->map(function ($file) {
-                $model = str_replace('.php', '', $file);
-                $model = str_replace(base_path() . '/', '', $model);
-                if (Str::contains($model, 'Interface')) {
-                    return str_replace('Interface', '', $model);
-                }
-            })->values()->all();
-
-            # List repositories interfaces/eloquents
-            foreach ($models as $model) {
-                if ($model != null) {
-                    $this->line(str_replace('/', '\\', Str::ucfirst($model)) . 'Interface');
-                    $this->line(str_replace('/', '\\', Str::ucfirst($model)) . 'Eloquent');
-                    $this->newLine();
-                }
-            }
+            return Command::SUCCESS;
         }
+
+        # "Registered" tells whether the interface is bound in the container,
+        # automatically (layers.auto_bind) or by a service provider
+        $this->table(
+            ['Interface', 'Implementation', 'Registered'],
+            collect($bindings)
+                ->map(fn (string $concrete, string $abstract): array => [
+                    $abstract,
+                    $concrete,
+                    $this->laravel->bound($abstract) ? 'yes' : 'no',
+                ])
+                ->values()
+                ->all()
+        );
 
         return Command::SUCCESS;
     }

@@ -4,31 +4,31 @@ declare(strict_types=1);
 
 namespace {{ namespace }};
 
-use App\Models\{{ class }};
+{{ imports }}
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Collection as SupportCollection;
 
-class {{ class }}RepositoryEloquent implements {{ class }}RepositoryInterface
+class {{ class }} implements {{ interface }}
 {
     public function __construct(
-        protected {{ class }} ${{ modelVariable }},
+        protected {{ model }} ${{ modelVariable }},
     ) {}
 
     /**
-     * Stores a new instance of {{ class }} in the database
+     * Stores a new instance of {{ model }} in the database
      * @param SupportCollection|array|int|string $data
-     * @return {{ class }}
+     * @return {{ model }}
      */
-    public function store(SupportCollection|array|int|string $data): {{ class }}
+    public function store(SupportCollection|array|int|string $data): {{ model }}
     {
         return $this->{{ modelVariable }}->create($data);
     }
 
     /**
-     * Returns all instances of {{ class }} from the database
+     * Returns all instances of {{ model }} from the database
      * @param array|string $columns
      * @param array<array>|null $filters
-     * @return Collection<int, {{ class }}>
+     * @return Collection<int, {{ model }}>
      */
     public function getList(array|string $columns = ['*'], ?array $filters = null): Collection
     {
@@ -42,22 +42,22 @@ class {{ class }}RepositoryEloquent implements {{ class }}RepositoryInterface
     }
 
     /**
-     * Returns an instance of {{ class }} from the given id
+     * Returns an instance of {{ model }} from the given id
      * @param int|string $id
-     * @return {{ class }}|null
+     * @return {{ model }}|null
      */
-    public function get(int|string $id): ?{{ class }}
+    public function get(int|string $id): ?{{ model }}
     {
         return $this->{{ modelVariable }}->find($id);
     }
 
     /**
-     * Updates the data of an instance of {{ class }}
+     * Updates the data of an instance of {{ model }}
      * @param SupportCollection|array|int|string $data
      * @param int|string $id
-     * @return {{ class }}
+     * @return {{ model }}
      */
-    public function update(SupportCollection|array|int|string $data, int|string $id): {{ class }}
+    public function update(SupportCollection|array|int|string $data, int|string $id): {{ model }}
     {
         ${{ modelVariable }} = $this->{{ modelVariable }}->findOrFail($id);
         ${{ modelVariable }}->update($data);
@@ -66,7 +66,7 @@ class {{ class }}RepositoryEloquent implements {{ class }}RepositoryInterface
     }
 
     /**
-     * Removes an instance of {{ class }} from the database
+     * Removes an instance of {{ model }} from the database
      * @param int|string $id
      * @return bool
      */

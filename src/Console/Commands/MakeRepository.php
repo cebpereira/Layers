@@ -4,12 +4,16 @@ declare(strict_types=1);
 
 namespace CebPereira\Layers\Console\Commands;
 
-use Illuminate\Console\GeneratorCommand;
-use Illuminate\Support\Str;
+use CebPereira\Layers\Console\Concerns\GeneratesLayers;
+use CebPereira\Layers\Support\LayerTarget;
+use CebPereira\Layers\Support\ModelLocator;
+use Illuminate\Console\Command;
 use InvalidArgumentException;
 
-class MakeRepository extends GeneratorCommand
+class MakeRepository extends Command
 {
+    use GeneratesLayers;
+
     /**
      * The name and signature of the console command.
      *
@@ -28,117 +32,59 @@ class MakeRepository extends GeneratorCommand
      */
     protected $description = 'Create a repository file';
 
-    protected $type = 'Repository file';
-
-    protected function getNameInput(): string
-    {
-        return str_replace('.', '/', trim($this->argument('name')));
-    }
-
     /**
-     * Get the stub file for the generator.
+     * Execute the console command.
      *
-     * @return string
+     * @return int
      */
-    protected function getStub(): string
+    public function handle(ModelLocator $locator): int
     {
-        $stubs_path = base_path('vendor/cebpereira/layers') . '/src/Console/Commands/Stubs/';
-        return $stubs_path . 'Repository' . $this->getType() . '.stub';
-    }
+        try {
+            $layer = $this->layer();
+            $model = $locator->resolve((string) $this->argument('name'));
+            $interface = LayerTarget::for('interface', $model);
+            $target = LayerTarget::for($layer, $model);
+        } catch (InvalidArgumentException $e) {
+            $this->components->error($e->getMessage());
 
-    /**
-     * Get the default namespace for the class.
-     *
-     * @param  string  $rootNamespace
-     * @return string
-     */
-    protected function getDefaultNamespace($rootNamespace): string
-    {
-        return $rootNamespace . '\\' . config('layers.namespace.repositories');
-    }
-
-    /**
-     * Get the destination class path.
-     *
-     * @param  string  $name
-     * @return string
-     */
-    protected function getPath($name): string
-    {
-        $name = Str::replaceFirst($this->rootNamespace(), '', $name);
-
-        return $this->laravel['path'] . '/' . str_replace('\\', '/', $name) . 'Repository' . $this->getType() . '.php';
-    }
-
-    /**
-     * Build the class with the given name.
-     *
-     * @param  string  $name
-     * @return string
-     */
-    protected function buildClass($name): string
-    {
-        $stub = parent::buildClass($name);
-
-        return $this->replaceModel($stub, $name);
-    }
-
-    /**
-     * Replace the model for the given stub.
-     *
-     * @param  string  $stub
-     * @param  string  $model
-     * @return string
-     */
-    protected function replaceModel($stub, $model): string
-    {
-        $modelClass = $this->parseModel($model);
-
-        $replace = [
-            '{{ modelVariable }}' => lcfirst(class_basename($modelClass)),
-        ];
-
-        return str_replace(
-            array_keys($replace),
-            array_values($replace),
-            $stub
-        );
-    }
-
-    /**
-     * Get the fully-qualified model class name.
-     *
-     * @param  string  $model
-     * @return string
-     *
-     * @throws \InvalidArgumentException
-     */
-    protected function parseModel(string $model): string
-    {
-        if (preg_match('([^A-Za-z0-9_/\\\\])', $model)) {
-            throw new InvalidArgumentException('Model name contains invalid characters.');
+            return Command::FAILURE;
         }
 
-        return $this->qualifyModel($model);
+        if (! $model->exists) {
+            $this->components->warn(sprintf('Model [%s] was not found.', $model->fqcn));
+        }
+
+        $imports = $layer === 'eloquent' ? [$model->fqcn, $interface->fqcn()] : [$model->fqcn];
+
+        $created = $this->writeLayer('Repository file', $target, 'Repository' . ucfirst($layer), [
+            'imports' => $this->imports($target->namespace, $imports),
+            'model' => $model->name,
+            'modelFqcn' => $model->fqcn,
+            'modelVariable' => lcfirst($model->name),
+            'interface' => $interface->class,
+            'interfaceFqcn' => $interface->fqcn(),
+        ]);
+
+        return $created ? Command::SUCCESS : Command::FAILURE;
     }
 
     /**
-     * Get the repository type.
+     * Get the repository layer.
      *
      * @return string
      *
      * @throws \InvalidArgumentException
      */
-    protected function getType(): string
+    protected function layer(): string
     {
         $options = $this->options();
 
         if ($options['eloquent'] && $options['interface']) {
             throw new InvalidArgumentException('More than one option provided: expected \'eloquent\' or \'interface\', not both.');
         } elseif ($options['eloquent']) {
-            return 'Eloquent';
+            return 'eloquent';
         } elseif ($options['interface']) {
-            return 'Interface';
+            return 'interface';
         }
 
         throw new InvalidArgumentException('Invalid option: expected \'eloquent\' or \'interface\'.');

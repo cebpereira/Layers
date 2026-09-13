@@ -6,6 +6,7 @@ namespace CebPereira\Layers\Console\Commands;
 
 use CebPereira\Layers\Console\Concerns\GeneratesLayers;
 use CebPereira\Layers\Support\BindingScanner;
+use CebPereira\Layers\Support\LayersConfig;
 use CebPereira\Layers\Support\LayerTarget;
 use CebPereira\Layers\Support\ModelLocator;
 use Illuminate\Console\Command;
@@ -53,6 +54,8 @@ class MakeService extends Command
             return Command::FAILURE;
         }
 
+        $modifiers = LayersConfig::propertyModifiers();
+
         $created = $this->writeLayer('Service file', $target, 'Service', [
             'imports' => $this->imports(
                 $target->namespace,
@@ -60,11 +63,13 @@ class MakeService extends Command
             ),
             'parameters' => $repositories
                 ->map(fn (array $repository): string => sprintf(
-                    '        protected %s $repo%s,',
+                    '        %s %s $repo%s,',
+                    $modifiers,
                     $repository['interface']->class,
                     $repository['model']
                 ))
                 ->implode("\n"),
+            'propertyModifiers' => $modifiers,
         ]);
 
         return $created ? Command::SUCCESS : Command::FAILURE;

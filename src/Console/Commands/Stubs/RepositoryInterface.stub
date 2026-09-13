@@ -6,46 +6,41 @@ namespace {{ namespace }};
 
 {{ imports }}
 use Illuminate\Database\Eloquent\Collection;
-use Illuminate\Support\Collection as SupportCollection;
 
 interface {{ class }}
 {
     public function __construct({{ model }} ${{ modelVariable }});
 
     /**
-     * Stores a new instance of {{ model }} in the database
-     * @param SupportCollection|array|int|string $data
-     * @return {{ model }}
+     * Store a new instance of {{ model }} in the database.
+     *
+     * @param  array<string, mixed>  $data
      */
-    public function store(SupportCollection|array|int|string $data): {{ model }};
+    public function store(array $data): {{ model }};
 
     /**
-     * Returns all instances of {{ model }} from the database
-     * @param array|string $columns
-     * @param array<array>|null $filters
+     * Get all instances of {{ model }} from the database.
+     *
+     * @param  array<int, string>|string  $columns
+     * @param  array<array-key, mixed>|null  $filters
      * @return Collection<int, {{ model }}>
      */
     public function getList(array|string $columns = ['*'], ?array $filters = null): Collection;
 
     /**
-     * Returns an instance of {{ model }} from the given id
-     * @param int|string $id
-     * @return {{ model }}|null
+     * Get the instance of {{ model }} with the given id.
      */
     public function get(int|string $id): ?{{ model }};
 
     /**
-     * Updates the data of an instance of {{ model }}
-     * @param SupportCollection|array|int|string $data
-     * @param int|string $id
-     * @return {{ model }}
+     * Update the data of an instance of {{ model }}.
+     *
+     * @param  array<string, mixed>  $data
      */
-    public function update(SupportCollection|array|int|string $data, int|string $id): {{ model }};
+    public function update(array $data, int|string $id): {{ model }};
 
     /**
-     * Removes an instance of {{ model }} from the database
-     * @param int|string $id
-     * @return bool
+     * Remove an instance of {{ model }} from the database.
      */
     public function destroy(int|string $id): bool;
 }

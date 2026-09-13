@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace CebPereira\Layers\Console\Commands;
 
+use CebPereira\Layers\Support\ModelLocator;
+use CebPereira\Layers\Support\ModelRoot;
 use Illuminate\Console\Command;
-use Illuminate\Support\Facades\File;
-use Symfony\Component\Finder\Finder;
 
 class ScaffoldLayers extends Command
 {
@@ -32,20 +32,20 @@ class ScaffoldLayers extends Command
      *
      * @return int
      */
-    public function handle(): int
+    public function handle(ModelLocator $locator): int
     {
-        $modelsPath = config('layers.path.models');
+        $roots = collect($locator->roots());
 
-        if (! File::exists($modelsPath)) {
-            $this->error("Models directory not found: {$modelsPath}");
+        if (! $roots->contains(fn (ModelRoot $root): bool => $root->exists())) {
+            $this->error('Models directory not found: ' . ($roots->map->directory->implode(', ') ?: 'check layers.models'));
 
             return Command::FAILURE;
         }
 
-        $models = $this->resolveModels($modelsPath);
+        $models = $locator->all();
 
         if ($models->isEmpty()) {
-            $this->warn('No models found in: ' . $modelsPath);
+            $this->warn('No models found in: ' . $roots->map->directory->implode(', '));
 
             return Command::SUCCESS;
         }
@@ -55,14 +55,14 @@ class ScaffoldLayers extends Command
         $this->info('Scaffolding layers...');
         $this->newLine();
 
-        foreach ($models as $name) {
-            $this->line($name);
+        foreach ($models as $model) {
+            $this->line($model->qualifiedIdentity());
 
-            $this->call('layers:repository', ['name' => $name, '--interface' => true]);
-            $this->call('layers:repository', ['name' => $name, '--eloquent' => true]);
+            $this->call('layers:repository', ['name' => $model->fqcn, '--interface' => true]);
+            $this->call('layers:repository', ['name' => $model->fqcn, '--eloquent' => true]);
 
             if ($withService) {
-                $this->call('layers:service', ['name' => $name]);
+                $this->call('layers:service', ['name' => $model->fqcn]);
             }
 
             $this->newLine();
@@ -71,22 +71,5 @@ class ScaffoldLayers extends Command
         $this->info('Done.');
 
         return Command::SUCCESS;
-    }
-
-    /**
-     * Resolves model names relative to the models directory,
-     * preserving subdirectory structure.
-     *
-     * @return \Illuminate\Support\Collection<int, string>
-     */
-    protected function resolveModels(string $modelsPath): \Illuminate\Support\Collection
-    {
-        return collect((new Finder)->files()->name('*.php')->in($modelsPath))
-            ->map(function ($file) use ($modelsPath) {
-                $relative = str_replace([$modelsPath . DIRECTORY_SEPARATOR, '.php'], '', $file->getPathname());
-
-                return str_replace(DIRECTORY_SEPARATOR, '/', $relative);
-            })
-            ->values();
     }
 }

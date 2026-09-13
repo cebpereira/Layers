@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace {{ namespace }};
 
-use {{ namespaceRepository }};
+{{ imports }}
 
-class {{ class }}Service
+class {{ class }}
 {
     public function __construct(
-        protected {{ class }}RepositoryInterface $repo{{ class }},
+{{ parameters }}
     ) {}
 
     // Add your functions here...

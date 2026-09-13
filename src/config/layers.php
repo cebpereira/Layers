@@ -49,6 +49,19 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Property modifiers
+    |--------------------------------------------------------------------------
+    |
+    | Modifiers of the properties promoted in generated constructors: the
+    | model of repositories and the repositories of services. For example:
+    | 'protected', 'private readonly' or 'public readonly'.
+    |
+    */
+
+    'property_modifiers' => 'protected',
+
+    /*
+    |--------------------------------------------------------------------------
     | Automatic bindings
     |--------------------------------------------------------------------------
     |

@@ -96,6 +96,31 @@ final class LayersConfig
         return array_replace($structure, is_array($configured) ? array_filter($configured, 'is_string') : []);
     }
 
+    /**
+     * Modifiers of the properties promoted in generated constructors.
+     *
+     * @throws \InvalidArgumentException
+     */
+    public static function propertyModifiers(): string
+    {
+        $value = (string) config('layers.property_modifiers', 'protected');
+        $modifiers = preg_split('/\s+/', $value, -1, PREG_SPLIT_NO_EMPTY) ?: [];
+
+        $valid = $modifiers !== []
+            && array_diff($modifiers, ['public', 'protected', 'private', 'readonly']) === []
+            && count(array_intersect($modifiers, ['public', 'protected', 'private'])) <= 1
+            && count($modifiers) === count(array_unique($modifiers));
+
+        if (! $valid) {
+            throw new InvalidArgumentException(sprintf(
+                'Invalid layers.property_modifiers [%s]: expected one visibility (public, protected, private) and/or readonly.',
+                $value
+            ));
+        }
+
+        return implode(' ', $modifiers);
+    }
+
     public static function autoBind(): bool
     {
         return (bool) config('layers.auto_bind', true);

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace CebPereira\Layers\Console\Commands;
 
 use CebPereira\Layers\Console\Concerns\GeneratesLayers;
+use CebPereira\Layers\Support\LayersConfig;
 use CebPereira\Layers\Support\LayerTarget;
 use CebPereira\Layers\Support\ModelLocator;
 use Illuminate\Console\Command;
@@ -63,6 +64,7 @@ class MakeRepository extends Command
             'modelVariable' => lcfirst($model->name),
             'interface' => $interface->class,
             'interfaceFqcn' => $interface->fqcn(),
+            'propertyModifiers' => LayersConfig::propertyModifiers(),
         ]);
 
         return $created ? Command::SUCCESS : Command::FAILURE;

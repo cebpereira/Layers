@@ -19,6 +19,7 @@ Go to [Laravel Docs](https://laravel.com/docs/releases#support-policy) to see su
 - <a href="#modular-applications">Modular Applications</a>
 - <a href="#bindings">Bindings</a>
 - <a href="#customizing-stubs">Customizing Stubs</a>
+- <a href="#upgrading-to-15">Upgrading to 1.5</a>
 - <a href="#upgrading-to-14">Upgrading to 1.4</a>
 
 ## Requirements
@@ -69,6 +70,8 @@ return [
         ],
     ],
 
+    'property_modifiers' => 'protected',
+
     'auto_bind' => true,
 
 ];
@@ -78,6 +81,7 @@ return [
 - **structure** : folder and class name of each layer. The folder is relative to the **parent of the models directory**, so `app/Models` generates layers inside `app`, and `app/Modules/Core/Models` generates layers inside `app/Modules/Core`.
   - `{subpath}` : the model subfolder (`Auth` for `app/Models/Auth/Token.php`)
   - `{model}` : the model name (`Token`)
+- **property_modifiers** : modifiers of the properties promoted in generated constructors (the repository model and the service repositories), e.g. `protected`, `private readonly` or `public readonly`.
 - **auto_bind** : bind every repository interface to its eloquent implementation. See <a href="#bindings">Bindings</a>.
 
 Namespaces are resolved from the PSR-4 mappings in your `composer.json`.
@@ -139,46 +143,41 @@ namespace App\Repositories;
 
 use App\Models\User;
 use Illuminate\Database\Eloquent\Collection;
-use Illuminate\Support\Collection as SupportCollection;
 
 interface UserRepositoryInterface
 {
     public function __construct(User $user);
 
     /**
-     * Stores a new instance of User in the database
-     * @param SupportCollection|array|int|string $data
-     * @return User
+     * Store a new instance of User in the database.
+     *
+     * @param  array<string, mixed>  $data
      */
-    public function store(SupportCollection|array|int|string $data): User;
+    public function store(array $data): User;
 
     /**
-     * Returns all instances of User from the database
-     * @param array|string $columns
-     * @param array<array>|null $filters
+     * Get all instances of User from the database.
+     *
+     * @param  array<int, string>|string  $columns
+     * @param  array<array-key, mixed>|null  $filters
      * @return Collection<int, User>
      */
     public function getList(array|string $columns = ['*'], ?array $filters = null): Collection;
 
     /**
-     * Returns an instance of User from the given id
-     * @param int|string $id
-     * @return User|null
+     * Get the instance of User with the given id.
      */
     public function get(int|string $id): ?User;
 
     /**
-     * Updates the data of an instance of User
-     * @param SupportCollection|array|int|string $data
-     * @param int|string $id
-     * @return User
+     * Update the data of an instance of User.
+     *
+     * @param  array<string, mixed>  $data
      */
-    public function update(SupportCollection|array|int|string $data, int|string $id): User;
+    public function update(array $data, int|string $id): User;
 
     /**
-     * Removes an instance of User from the database
-     * @param int|string $id
-     * @return bool
+     * Remove an instance of User from the database.
      */
     public function destroy(int|string $id): bool;
 }
@@ -194,7 +193,6 @@ namespace App\Repositories;
 
 use App\Models\User;
 use Illuminate\Database\Eloquent\Collection;
-use Illuminate\Support\Collection as SupportCollection;
 
 class UserRepositoryEloquent implements UserRepositoryInterface
 {
@@ -203,19 +201,20 @@ class UserRepositoryEloquent implements UserRepositoryInterface
     ) {}
 
     /**
-     * Stores a new instance of User in the database
-     * @param SupportCollection|array|int|string $data
-     * @return User
+     * Store a new instance of User in the database.
+     *
+     * @param  array<string, mixed>  $data
      */
-    public function store(SupportCollection|array|int|string $data): User
+    public function store(array $data): User
     {
-        return $this->user->create($data);
+        return $this->user->newQuery()->create($data);
     }
 
     /**
-     * Returns all instances of User from the database
-     * @param array|string $columns
-     * @param array<array>|null $filters
+     * Get all instances of User from the database.
+     *
+     * @param  array<int, string>|string  $columns
+     * @param  array<array-key, mixed>|null  $filters
      * @return Collection<int, User>
      */
     public function getList(array|string $columns = ['*'], ?array $filters = null): Collection
@@ -230,37 +229,32 @@ class UserRepositoryEloquent implements UserRepositoryInterface
     }
 
     /**
-     * Returns an instance of User from the given id
-     * @param int|string $id
-     * @return User|null
+     * Get the instance of User with the given id.
      */
     public function get(int|string $id): ?User
     {
-        return $this->user->find($id);
+        return $this->user->newQuery()->find($id);
     }
 
     /**
-     * Updates the data of an instance of User
-     * @param SupportCollection|array|int|string $data
-     * @param int|string $id
-     * @return User
+     * Update the data of an instance of User.
+     *
+     * @param  array<string, mixed>  $data
      */
-    public function update(SupportCollection|array|int|string $data, int|string $id): User
+    public function update(array $data, int|string $id): User
     {
-        $user = $this->user->findOrFail($id);
+        $user = $this->user->newQuery()->findOrFail($id);
         $user->update($data);
 
         return $user;
     }
 
     /**
-     * Removes an instance of User from the database
-     * @param int|string $id
-     * @return bool
+     * Remove an instance of User from the database.
      */
     public function destroy(int|string $id): bool
     {
-        return (bool) $this->user->findOrFail($id)->delete();
+        return (bool) $this->user->newQuery()->findOrFail($id)->delete();
     }
 }
 ```
@@ -449,8 +443,18 @@ The stubs are copied to `stubs/layers` and used instead of the package ones.
 | Stub | Placeholders |
 |---|---|
 | `RepositoryInterface.stub` | `namespace`, `class`, `imports`, `model`, `modelFqcn`, `modelVariable` |
-| `RepositoryEloquent.stub` | `namespace`, `class`, `imports`, `model`, `modelFqcn`, `modelVariable`, `interface`, `interfaceFqcn` |
-| `Service.stub` | `namespace`, `class`, `imports`, `parameters` |
+| `RepositoryEloquent.stub` | `namespace`, `class`, `imports`, `model`, `modelFqcn`, `modelVariable`, `interface`, `interfaceFqcn`, `propertyModifiers` |
+| `Service.stub` | `namespace`, `class`, `imports`, `parameters`, `propertyModifiers` |
+
+`parameters` already includes the configured `property_modifiers`, so the visibility of service repositories is changed in the config, not in the stub. `propertyModifiers` is available for properties you add to your own stubs.
+
+The default stubs pass PHPStan level 8 (with Larastan) and Pint with the Laravel preset. With `private` modifiers, PHPStan reports the repositories of a newly generated service as never read until the service uses them.
+
+## Upgrading to 1.5
+
+- Generated repositories accept only `array` in `store` and `update`. The previous `SupportCollection|array|int|string` union failed at runtime for anything but arrays, because Eloquent `create` and `update` only accept arrays. Call `->all()` on collections before passing them.
+- Existing interfaces and implementations are not changed. Regenerate both files together, or keep the old stubs by publishing them.
+- Published `RepositoryEloquent.stub` files keep their hardcoded visibility. Replace `protected` with `{{ propertyModifiers }}` to follow the config.
 
 ## Upgrading to 1.4
 
